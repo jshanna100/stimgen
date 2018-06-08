@@ -1,13 +1,11 @@
 import numpy as np
-from numpy.random import randint
 from scipy.io import wavfile
-from scipy.fftpack import rfft, irfft, fftfreq
+from scipy.stats import norm
+from scipy.signal import iirfilter,lfilter
 
 sdir = "u:/tinnitus_tone/"
 so = "4000hz"
 
-def fft_gauss(data,cf,f_win):
-    
 
 class gen_params():
     def __init__(self,name,length,sampfreq,dirname="",min=-16000,max=16000):
@@ -15,11 +13,37 @@ class gen_params():
         self.name = name
         self.length = length
         self.sampfreq = sampfreq
-        self.data = randint(
+        self.data = np.random.randint(
                 low=min,high=max,size=(length*sampfreq),dtype="int16")
 
-    def save(self):
-        wavfile.write(self.dirname+self.name+".wav",self.sampfreq,self.data)
+    def save(self,filt_type=0):
+        if not filt_type:
+            wavfile.write(self.dirname+self.name+".wav",self.sampfreq,self.data)
+        elif filt_type == 1:
+            wavfile.write(self.dirname+self.name+"_fftf.wav",self.sampfreq,self.data_fftf)
+        elif filt_type == 2:
+            wavfile.write(self.dirname+self.name+"_cheby.wav",self.sampfreq,self.data_cheby)
         
+    def fft_gauss(self,cf,f_win):
+        self.fft = np.fft.rfft(self.data)
+        self.Fs = np.fft.rfftfreq(len(self.data),1/self.sampfreq)
+        
+        min_f, max_f = cf-cf*f_win, cf+cf*f_win
+        min_idx = abs(self.Fs-min_f).argmin()
+        max_idx = abs(self.Fs-max_f).argmin()
+        cf_idx = abs(self.Fs-cf).argmin()
+        idx_abstand = max_idx-min_idx
+        std = idx_abstand/(2*np.sqrt(2*np.log(2)))
+        gauss_func = norm.pdf(np.array(range(len(self.Fs))),cf_idx,std)
+        gauss_func = (gauss_func-np.min(gauss_func))/(np.max(gauss_func)-np.min(gauss_func))
+        self.fft_filtered = self.fft * gauss_func
+        self.data_fftf = np.round(np.fft.irfft(self.fft_filtered)).astype("int16")
+        
+    def cheby(self,cf,f_win,rp):        
+        min_f,max_f = (cf-cf*f_win)/(self.sampfreq/2),(cf+cf*f_win)/(self.sampfreq/2)
+        b,a = iirfilter(2,[min_f,max_f],rp=rp,ftype="cheby1")
+        self.data_cheby = np.round(lfilter(b,a,self.data)).astype("int16")
 
-
+test = gen_params("test",3,44100)
+test.cheby(5250,0.15,5)
+test.save(filt_type=2)
