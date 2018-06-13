@@ -3,9 +3,17 @@ import numpy as np
 from numpy.random import randint
 from scipy.io import wavfile
 
-sdir = "u:/tinnitus_tone/"
-sounds = ["Tea_Kettle","4000Hz","7500Hz","Buzzing","Electric","Roaring","Screeching","Static",]
+sdir = "/home/jeff/stimgen/wavs/"
+sounds = []
+for s in ["4000Hz","7500Hz","4000_fftf","4000_cheby"]:
+    sounds.append(s)
+    sounds.append(s+" (copy)")
 n_len_fact = 10
+
+def raw2db(raw):
+    return 20*np.log10(abs(raw/32767))
+def db2fact(db):
+    return np.round(10**(db/20)*32767).astype("int16")
 
 def reihe_gen(time,n_schw_rang,min_dist):
     onsets = [0]
@@ -33,15 +41,15 @@ def apply_schwank(sampFreq,snd,vec,schw):
         end = np.int(np.round((v+schw)*sampFreq*0.001))
         abstand = end - start
         for x_idx,x in enumerate(range(start,end)):
-            snd[x] = np.int(np.round(
-                    snd[x]-snd[x]*(np.sin((np.pi*x_idx)/abstand))/2))
-    return n_snd 
+            snd[x] = np.sign(snd[x])*db2fact(raw2db(snd[x])+
+               np.sin((np.pi*x_idx)/abstand)*(-90-raw2db(snd[x]))/5)
+    return snd 
 
 AudSchwank = np.ones((8,15),dtype=int)*-1
 
 idx = 0
 for i_idx in range(len(AudSchwank)):
-    rgs = reihe_gen(50000,(5,15),1500)
+    rgs = reihe_gen(50000,(9,15),3000)
     for j_idx,j in enumerate(rgs):
         AudSchwank[i_idx,j_idx] = j
         

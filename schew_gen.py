@@ -23,7 +23,7 @@ VisSchwank = np.ones((8,15),dtype=int)*-1
 
 idx = 0
 for i_idx in range(len(VisSchwank)):
-    rgs = reihe_gen(50000,(5,15),1500)
+    rgs = reihe_gen(50000,(9,15),3000)
     for j_idx,j in enumerate(rgs):
         VisSchwank[i_idx,j_idx] = j
         
